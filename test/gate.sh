@@ -237,7 +237,7 @@ for prog in examples/*.lang; do
   node "$tmp/gpu-$name.js" 2>"$tmp/err" || status=$?
   case "$name:$status" in
     kernels:0) echo "FAIL js gpu $prog: node passed without a GPU adapter"; fail=$((fail + 1)) ;;
-    kernels:*) rg -q 'Error: selftest: 11 GPU tests and no GPU adapter' "$tmp/err" \
+    kernels:*) rg -q 'Error: selftest: 13 GPU tests and no GPU adapter' "$tmp/err" \
       || { echo "FAIL js gpu $prog: $(rg -m 1 'Error' "$tmp/err")"; fail=$((fail + 1)); } ;;
     *:0) ;;
     *) echo "FAIL js gpu $prog: $(rg -m 1 'Error' "$tmp/err")"; fail=$((fail + 1)) ;;

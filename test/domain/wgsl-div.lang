@@ -1,0 +1,4 @@
+-- The public program calls this domain definition. Its dynamic divisor
+-- must retain the refusal exercised by the former wgsl-div program.
+def dynamicMod : Tile 2 2 U32 -> Tile 2 2 U32 :=
+  fun t => tabulate 2 2 (fun i j => at t (natMod i (natAdd j 1)) 0)

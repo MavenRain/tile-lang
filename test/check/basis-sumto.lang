@@ -1,0 +1,1 @@
+def s : U32 := sumTo 2 (fun k => 1u)

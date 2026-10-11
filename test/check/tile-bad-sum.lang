@@ -1,1 +1,1 @@
-def wrong : Eq U32 (sumTo 4 (fun k => 3u)) 13u := refl
+def wrong : Eq (Tile 1 1 U32) (reduce 2 2 (fun x y => u32Add x y) 0u (fill 2 2 3u)) (fill 1 1 13u) := refl

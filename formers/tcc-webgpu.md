@@ -22,7 +22,7 @@ binder scope and domain declarations.
 | F1 | Product | DONE: `pair`, `first`, `second`; `examples/formers.lang`, `examples/functions.lang` |
 | F2 | Coproduct | DONE: `inl`, `inr`; `examples/formers.lang`, `examples/laws.lang` |
 | F3 | Option | DONE: `none`, `some`; `examples/formers.lang`, `examples/monad.lang` |
-| F4 | List | DONE: `nil`, `cons`; `examples/formers.lang`, `examples/inventory.lang` |
+| F4 | List | DONE: `nil`, `cons`; `examples/formers.lang` |
 | F5 | Monad pure/map/bind | DONE over Option, Sum E and List: `examples/monad.lang`, `examples/laws.lang` |
 | F6 | Algebra fold | DONE over Nat, List and each family: `examples/algebra.lang`, `examples/entries.lang` |
 | F7 | Algebra unfold | DONE into List with a Nat step limit: `examples/algebra.lang` |
@@ -33,7 +33,7 @@ binder scope and domain declarations.
 | F12 | Eq refl/symm/trans | DONE: `examples/equality.lang`, `examples/laws.lang` |
 | F13 | Eq transport/cong | DONE: `examples/equality.lang` |
 | F14 | Universes | DONE: `Type 0` and `Type 1`, without cumulativity; `examples/universes.lang`, `test/check/cumulative.lang`, `test/check/type2.lang` |
-| F15 | Generic indexed family | DONE in `domain/` only (rule R1): `Lot` in `domain/domain.lang`, `examples/inventory.lang` |
+| F15 | Generic indexed family | DONE in `domain/` only (rule R1): the checker support stays, but the tile-lang domain declares no family (T1) |
 
 JSON output of each former: `README.md`, section The JSON document.
 Functions, types, families and equality proofs are not instances. Thus

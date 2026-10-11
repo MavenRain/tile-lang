@@ -1,32 +1,38 @@
 -- Kernels: an entry is a program definition from tiles (and U32 values) to
 -- a tile, with closed shapes. `langc build --wgsl` writes one WGSL compute
--- shader for each entry (test/wgsl/kernels.wgsl). Each proof is refl: the C
--- evaluator runs the entry on closed tiles.
-def ofNat : Nat -> U32 := fun n => sumTo n (fun k => 1u)
-def a23 : Tile 2 3 U32 := tabulate 2 3 (fun i j => ofNat (natAdd (natMul i 3) (natAdd j 1)))
-def b32 : Tile 3 2 U32 := tabulate 3 2 (fun i j => ofNat (natAdd (natMul i 2) (natAdd j 7)))
-def upper : Tile 2 3 Flag := tabulate 2 3 (fun i j => natLe i j)
-def copyE : Tile 2 3 U32 -> Tile 2 3 U32 := fun t => tabulate 2 3 (fun i j => at t i j)
-def addE : Tile 2 3 U32 -> Tile 2 3 U32 -> Tile 2 3 U32 := fun x y => tabulate 2 3 (fun i j => u32Add (at x i j) (at y i j))
-def gemmE : Tile 2 3 U32 -> Tile 3 2 U32 -> Tile 2 2 U32 := fun x y => tabulate 2 2 (fun i j => sumTo 3 (fun k => u32Mul (at x i k) (at y k j)))
-def trE : Tile 2 3 U32 -> Tile 3 2 U32 := fun t => tabulate 3 2 (fun i j => at t j i)
-def rowSumE : Tile 2 3 U32 -> Tile 2 1 U32 := fun t => tabulate 2 1 (fun i j => sumTo 3 (fun k => at t i k))
-def rowProdE : Tile 2 3 U32 -> Tile 2 1 U32 := fun t => tabulate 2 1 (fun i j => foldTo 3 (fun x y => u32Mul x y) 1u (fun k => at t i k))
-def scaleE : U32 -> Tile 2 3 U32 -> Tile 2 3 U32 := fun s t => tabulate 2 3 (fun i j => u32Mul s (at t i j))
-def maskE : Tile 2 3 Flag -> Tile 2 3 U32 -> Tile 2 3 U32 := fun f t => tabulate 2 3 (fun i j => flagIf (at f i j) (at t i j) 0u)
-def upperE : Tile 2 3 Flag -> Tile 2 3 Flag := fun f => tabulate 2 3 (fun i j => flagIf (natLe i j) (at f i j) flagNo)
-def shiftE : Tile 2 3 U32 -> Tile 2 2 U32 := fun t => tabulate 2 2 (fun i j => at (trE t) (natAdd j 1) (natSub 1 i))
-def offsetE : Tile 2 3 U32 -> Tile 2 3 U32 := fun t => tabulate 2 3 (fun i j => u32Add (at t i j) (at a23 i j))
+-- shader for each entry (test/wgsl/kernels.wgsl). The writer unfolds the
+-- domain generators, so each entry is one pass and writes no intermediate
+-- buffer. Each proof is refl: the C evaluator runs the entry on closed tiles.
+def ofNat : Nat -> U32 := fun n => fold (fun x => u32Add x 1u) 0u n
+def a23 : Tile 2 3 U32 := kernel 2 3 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natAdd j 1))))
+def b32 : Tile 3 2 U32 := kernel 3 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 2) (natAdd j 7))))
+def c44 : Tile 4 4 U32 := kernel 4 4 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 4) j)))
+def copyE : Tile 2 3 U32 -> Tile 2 3 U32 := fun t => copy 2 3 t
+def mapE : Tile 2 3 U32 -> Tile 2 3 U32 := fun t => tmap 2 3 (fun x => u32Mul x 3u) t
+def addE : Tile 2 3 U32 -> Tile 2 3 U32 -> Tile 2 3 U32 := fun x y => tadd 2 3 x y
+def scaleE : U32 -> Tile 2 3 U32 -> Tile 2 3 U32 := fun s t => tmap 2 3 (fun x => u32Mul s x) t
+def gemmE : Tile 2 3 U32 -> Tile 3 2 U32 -> Tile 2 2 U32 := fun x y => gemm 2 3 2 x y
+def accE : Tile 2 2 U32 -> Tile 2 3 U32 -> Tile 3 2 U32 -> Tile 2 2 U32 := fun z x y => gemmAcc 2 3 2 z x y
+def sumE : Tile 2 3 U32 -> Tile 1 1 U32 := fun t => reduce 2 3 (fun x y => u32Add x y) 0u t
+def viewE : Tile 2 3 U32 -> Tile 2 2 U32 := fun t => view 2 3 0 1 1 1 2 2 t
+def trE : Tile 2 3 U32 -> Tile 3 2 U32 := fun t => tr 2 3 t
+-- blockE transposes each 2 x 2 block of a 4 x 4 tile: a kernel of tr of view.
+def blockE : Tile 4 4 U32 -> Tile 4 4 U32 := fun t => kernel 2 2 2 2 (fun bi bj => tr 2 2 (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 t))
 def copyCells : Eq (Tile 2 3 U32) (copyE a23) a23 := refl
-def addCell : Eq U32 (at (addE a23 a23) 1 2) 12u := refl
-def addCells : Eq (Tile 2 3 U32) (addE a23 a23) (tabulate 2 3 (fun i j => ofNat (natMul 2 (natAdd (natMul i 3) (natAdd j 1))))) := refl
-def gemmCells : Eq (Tile 2 2 U32) (gemmE a23 b32) (tabulate 2 2 (fun i j => flagIf (natEq i 0) (flagIf (natEq j 0) 58u 64u) (flagIf (natEq j 0) 139u 154u))) := refl
-def trCells : Eq (Tile 3 2 U32) (trE a23) (tabulate 3 2 (fun i j => ofNat (natAdd (natMul j 3) (natAdd i 1)))) := refl
-def rowSumCells : Eq (Tile 2 1 U32) (rowSumE a23) (tabulate 2 1 (fun i j => flagIf (natEq i 0) 6u 15u)) := refl
-def rowProdCells : Eq (Tile 2 1 U32) (rowProdE a23) (tabulate 2 1 (fun i j => flagIf (natEq i 0) 6u 120u)) := refl
-def scaleWrap : Eq U32 (at (scaleE 4294967295u a23) 0 1) 4294967294u := refl
-def scaleCells : Eq (Tile 2 3 U32) (scaleE 4294967295u a23) (tabulate 2 3 (fun i j => u32Sub 0u (at a23 i j))) := refl
-def maskCells : Eq (Tile 2 3 U32) (maskE upper a23) (tabulate 2 3 (fun i j => flagIf (natEq i 0) (ofNat (natAdd j 1)) (flagIf (natEq j 0) 0u (ofNat (natAdd j 4))))) := refl
-def upperCells : Eq (Tile 2 3 Flag) (upperE upper) upper := refl
-def shiftCells : Eq (Tile 2 2 U32) (shiftE a23) (tabulate 2 2 (fun i j => flagIf (natEq i 0) (ofNat (natAdd j 5)) (ofNat (natAdd j 2)))) := refl
-def offsetCells : Eq (Tile 2 3 U32) (offsetE a23) (addE a23 a23) := refl
+def mapCells : Eq (Tile 2 3 U32) (mapE a23) (kernel 2 3 1 1 (fun i j => fill 1 1 (ofNat (natMul 3 (natAdd (natMul i 3) (natAdd j 1)))))) := refl
+def addCells : Eq (Tile 2 3 U32) (addE a23 a23) (tmap 2 3 (fun x => u32Mul x 2u) a23) := refl
+def scaleCells : Eq (Tile 2 3 U32) (scaleE 4294967295u a23) (tsub 2 3 (fill 2 3 0u) a23) := refl
+def gemmCells : Eq (Tile 2 2 U32) (gemmE a23 b32) (kernel 2 2 1 1 (fun i j => fill 1 1 (flagIf (natEq i 0) (flagIf (natEq j 0) 58u 64u) (flagIf (natEq j 0) 139u 154u)))) := refl
+def accCells : Eq (Tile 2 2 U32) (accE (fill 2 2 1u) a23 b32) (kernel 2 2 1 1 (fun i j => fill 1 1 (flagIf (natEq i 0) (flagIf (natEq j 0) 59u 65u) (flagIf (natEq j 0) 140u 155u)))) := refl
+def sumCells : Eq (Tile 1 1 U32) (sumE a23) (fill 1 1 21u) := refl
+def viewCells : Eq (Tile 2 2 U32) (viewE a23) (kernel 2 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natAdd j 2))))) := refl
+def trCells : Eq (Tile 3 2 U32) (trE a23) (kernel 3 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul j 3) (natAdd i 1))))) := refl
+def blockCells : Eq (Tile 4 4 U32) (blockE c44) (kernel 2 2 2 2 (fun bi bj => kernel 2 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul (natAdd (natMul bi 2) j) 4) (natAdd (natMul bj 2) i)))))) := refl
+-- Empty contractions keep the seed or the additive identity. Their loop
+-- bodies must not be translated, since there is no cell to read.
+def emptyRowsE : U32 -> Tile 1 1 U32 := fun seed => reduce 0 3 (fun x y => u32Add x y) seed (fill 0 3 1u)
+def emptyColsE : U32 -> Tile 1 1 U32 := fun seed => reduce 2 0 (fun x y => u32Add x y) seed (fill 2 0 1u)
+def emptyGemmE : U32 -> Tile 2 3 U32 := fun seed => gemm 2 0 3 (fill 2 0 seed) (fill 0 3 seed)
+def emptyRowsCells : Eq (Tile 1 1 U32) (emptyRowsE 7u) (fill 1 1 7u) := refl
+def emptyColsCells : Eq (Tile 1 1 U32) (emptyColsE 9u) (fill 1 1 9u) := refl
+def emptyGemmCells : Eq (Tile 2 3 U32) (emptyGemmE 11u) (fill 2 3 0u) := refl

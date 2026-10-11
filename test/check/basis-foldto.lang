@@ -1,0 +1,1 @@
+def s : U32 := foldTo 2 (fun x y => u32Add x y) 0u (fun k => 1u)

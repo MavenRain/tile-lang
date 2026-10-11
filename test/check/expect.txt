@@ -32,3 +32,9 @@ u32-redefine.lang REFUSE_NAME
 tile-elem.lang TILE_ELEM
 tile-shape.lang TYPE_MISMATCH
 tile-bad-sum.lang TYPE_REFL
+basis-tabulate.lang REFUSE_BASIS
+basis-at.lang REFUSE_BASIS
+basis-sumto.lang REFUSE_BASIS
+basis-foldto.lang REFUSE_BASIS
+basis-natdiv.lang REFUSE_BASIS
+basis-natmod.lang REFUSE_BASIS

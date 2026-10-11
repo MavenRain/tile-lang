@@ -81,9 +81,9 @@ try {
 
   test('printed types preserve binding under normalization', () => {
     const cases = [
-      ['def T : Nat -> Type 0 := fun (n : Nat) => Sigma (x : Nat) (Lot n)\n', 'Sigma (x : Nat) (T x)', 'pack 3 (pack 4 (makeLot 3 9))'],
+      ['def T : Nat -> Type 0 := fun (n : Nat) => Sigma (x : Nat) (Tile n 1 U32)\n', 'Sigma (x : Nat) (T x)', 'pack 3 (pack 4 (fill 3 1 9u))'],
       ['def T : Type 0 := Nat\n', 'Sigma (Nat : Nat) T', 'pack 3 4'],
-      ['def _x0 : Type 0 := Nat\ndef T : Nat -> Type 0 := fun (n : Nat) => Sigma (x : Nat) (Lot n)\n', 'Sigma (x : Nat) (T x)', 'pack 3 (pack 4 (makeLot 3 9))'],
+      ['def _x0 : Type 0 := Nat\ndef T : Nat -> Type 0 := fun (n : Nat) => Sigma (x : Nat) (Tile n 1 U32)\n', 'Sigma (x : Nat) (T x)', 'pack 3 (pack 4 (fill 3 1 9u))'],
       ['def plus : Nat -> Nat := natAdd 1\n', 'Option (Eq (Nat -> Nat) plus plus)', 'some refl'],
     ];
     for (const [prefix, type, value] of cases) {

@@ -1,2 +1,2 @@
--- D9: the column index j + 1 reaches 3, outside the 2 x 3 parameter.
-def outE : Tile 2 3 U32 -> Tile 2 3 U32 := fun t => tabulate 2 3 (fun i j => at t i (natAdd j 1))
+-- D9: the view reads the column 1 + j, and j + 1 reaches 3, outside the 2 x 3 parameter.
+def outE : Tile 2 3 U32 -> Tile 2 3 U32 := fun t => view 2 3 0 1 1 1 2 3 t

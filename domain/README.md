@@ -1,10 +1,21 @@
 # Domain interface
 
-Replace the sample domain in `domain.lang` with the design of your
-language. `gen/embed.c` embeds this file in `build/langc` at build time.
-Its definitions have DOMAIN origin. Program files cannot redefine them.
+`domain.lang` holds the tile-lang domain: one definition for each
+generator of `design/DESIGN.md` (`copy`, `tmap`, `fill`, `tadd`, `tsub`,
+`tmul`, `gemm`, `gemmAcc`, `reduce`, `view`, `tr` and `kernel`).
+`gen/embed.c` embeds this file in `build/langc` at build time. Its
+definitions have DOMAIN origin. Program files cannot redefine them.
 
-`domain.lang` uses the program syntax, and it can also declare families:
+Only `domain.lang` can name the kit basis: `tabulate`, `at`, `sumTo`,
+`foldTo`, `natDiv` and `natMod`. The checker refuses a program that names
+one of them, applied or bare, with `REFUSE_BASIS` (`test/check/basis-*.lang`).
+A program makes and changes tiles with the generators only. The cells of
+each generator are `U32`: the checker refuses a variable element type
+(`TILE_ELEM`), so a generator cannot take the element type as an argument.
+The kit has the name `map`, so the map generator is `tmap`.
+
+`domain.lang` uses the program syntax, and it can also declare families.
+The tile-lang domain declares no family. This is an example of the syntax:
 
 ```
 family Color := red | green | blue

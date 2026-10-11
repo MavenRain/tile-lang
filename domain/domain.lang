@@ -1,19 +1,44 @@
--- Sample domain. Replace it with your design. See domain/README.md.
--- Each family, constructor, field and def name here becomes a core name
--- (rule R4). Only this file can declare a family (rule R1).
-family Color := red | green | blue
-family Item := makeItem (itemColor : Color) (itemPrice : Nat) (itemCount : Nat)
-family Stack := bottom | push (top : Nat) (rest : Stack)
--- An indexed family (former F15): `Lot 3` is a lot of size 3.
-family Lot (size : Nat) := makeLot (lotPrice : Nat)
+-- The tile-lang domain: one definition for each generator of
+-- design/DESIGN.md, on the kit basis (tabulate, at, sumTo, foldTo, natDiv,
+-- natMod). Only this file can name the kit basis. A program that names it
+-- gets REFUSE_BASIS; a program uses these generators.
+-- The cells of each tile are U32: the checker refuses a variable element
+-- type (TILE_ELEM), so a generator cannot take the element type as an
+-- argument. The shape arguments come first.
 
-def lineTotal : (item : Item) -> Nat :=
-  fun (item : Item) => natMul (itemPrice item) (itemCount item)
-def isRed : (color : Color) -> Flag :=
-  fun (color : Color) => fold flagYes flagNo flagNo color
-def total : (items : List Item) -> Nat :=
-  fun (items : List Item) => fold (fun (item : Item) (acc : Nat) => natAdd (lineTotal item) acc) 0 items
-def redTotal : (items : List Item) -> Nat :=
-  fun (items : List Item) => total (filter (fun (item : Item) => isRed (itemColor item)) items)
-def depth : (s : Stack) -> Nat :=
-  fun (s : Stack) => fold 0 (fun (top : Nat) (rest : Nat) => natAdd rest 1) s
+-- copy t = t: the identity transport.
+def copy : (r : Nat) -> (c : Nat) -> Tile r c U32 -> Tile r c U32 :=
+  fun r c t => t
+-- tmap f t = f after t: the functor action. The kit has the name map.
+def tmap : (r : Nat) -> (c : Nat) -> (U32 -> U32) -> Tile r c U32 -> Tile r c U32 :=
+  fun r c f t => tabulate r c (fun i j => f (at t i j))
+-- fill r c x: the constant tile x (an allocation that is initially constant).
+def fill : (r : Nat) -> (c : Nat) -> U32 -> Tile r c U32 :=
+  fun r c x => tabulate r c (fun i j => x)
+-- tadd, tsub and tmul: the pointwise ring of the function space.
+def tadd : (r : Nat) -> (c : Nat) -> Tile r c U32 -> Tile r c U32 -> Tile r c U32 :=
+  fun r c x y => tabulate r c (fun i j => u32Add (at x i j) (at y i j))
+def tsub : (r : Nat) -> (c : Nat) -> Tile r c U32 -> Tile r c U32 -> Tile r c U32 :=
+  fun r c x y => tabulate r c (fun i j => u32Sub (at x i j) (at y i j))
+def tmul : (r : Nat) -> (c : Nat) -> Tile r c U32 -> Tile r c U32 -> Tile r c U32 :=
+  fun r c x y => tabulate r c (fun i j => u32Mul (at x i j) (at y i j))
+-- gemm m k n a b: the contraction over k. gemmAcc z a b adds it to z.
+def gemm : (m : Nat) -> (k : Nat) -> (n : Nat) -> Tile m k U32 -> Tile k n U32 -> Tile m n U32 :=
+  fun m k n a b => tabulate m n (fun i j => sumTo k (fun l => u32Mul (at a i l) (at b l j)))
+def gemmAcc : (m : Nat) -> (k : Nat) -> (n : Nat) -> Tile m n U32 -> Tile m k U32 -> Tile k n U32 -> Tile m n U32 :=
+  fun m k n z a b => tadd m n z (gemm m k n a b)
+-- reduce r c op e t: the left fold of op from e over the cells of t, in row
+-- order. The design requires op to be associative (O7).
+def reduce : (r : Nat) -> (c : Nat) -> (U32 -> U32 -> U32) -> U32 -> Tile r c U32 -> Tile 1 1 U32 :=
+  fun r c op e t => tabulate 1 1 (fun i j => foldTo (natMul r c) op e (fun k => at t (natDiv k c) (natMod k c)))
+-- view r c r0 c0 rs cs m n t: the m x n tile at (r0 + rs i, c0 + cs j) of t,
+-- an affine embedding.
+def view : (r : Nat) -> (c : Nat) -> (r0 : Nat) -> (c0 : Nat) -> (rs : Nat) -> (cs : Nat) -> (m : Nat) -> (n : Nat) -> Tile r c U32 -> Tile m n U32 :=
+  fun r c r0 c0 rs cs m n t => tabulate m n (fun i j => at t (natAdd r0 (natMul rs i)) (natAdd c0 (natMul cs j)))
+-- tr r c t: the transpose, the other affine embedding of rank 2.
+def tr : (r : Nat) -> (c : Nat) -> Tile r c U32 -> Tile c r U32 :=
+  fun r c t => tabulate c r (fun i j => at t j i)
+-- kernel g1 g2 t1 t2 f: the product over the g1 x g2 grid of blocks. The
+-- block (i / t1, j / t2) gives the cell (i mod t1, j mod t2).
+def kernel : (g1 : Nat) -> (g2 : Nat) -> (t1 : Nat) -> (t2 : Nat) -> (Nat -> Nat -> Tile t1 t2 U32) -> Tile (natMul g1 t1) (natMul g2 t2) U32 :=
+  fun g1 g2 t1 t2 f => tabulate (natMul g1 t1) (natMul g2 t2) (fun i j => at (f (natDiv i t1) (natDiv j t2)) (natMod i t1) (natMod j t2))

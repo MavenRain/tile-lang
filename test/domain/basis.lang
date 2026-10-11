@@ -1,0 +1,19 @@
+-- The basis is still used by the domain. Keep its evaluator regressions
+-- under DOMAIN origin rather than exposing the primitives to programs.
+def wide : Tile 2 3 U32 := tabulate 2 3 (fun i j => flagIf (natEq j (natAdd i 1)) 1u 0u)
+def mask : Tile 2 2 Flag := tabulate 2 2 (fun i j => natLe i j)
+def wideFlat : Eq U32 (at wide (natDiv 5 3) (natMod 5 3)) 1u := refl
+def maskCells : Eq (Tile 2 2 Flag) mask (tabulate 2 2 (fun i j => flagIf (natEq i 1) (natEq j 1) (natLe 0 j))) := refl
+def sumFour : Eq U32 (sumTo 4 (fun k => 3u)) 12u := refl
+def sumMixed : Eq U32 (sumTo 5 (fun k => flagIf (natLe k 2) 1u 10u)) 23u := refl
+def sumWrap : Eq U32 (sumTo 2 (fun k => 4294967295u)) 4294967294u := refl
+def sumEmpty : Eq U32 (sumTo 0 (fun k => 3u)) 0u := refl
+def power : Eq U32 (foldTo 3 (fun x y => u32Mul x y) 1u (fun k => 2u)) 8u := refl
+def powerMixed : Eq U32 (foldTo 4 (fun x y => u32Mul x y) 1u (fun k => flagIf (natEq k 0) 1u 3u)) 27u := refl
+def foldOrder : Eq U32 (foldTo 3 (fun x y => u32Sub y x) 0u (fun k => flagIf (natEq k 1) 5u 2u)) 4294967295u := refl
+def foldEmpty : Eq U32 (foldTo 0 (fun x y => u32Mul x y) 7u (fun k => 2u)) 7u := refl
+def divRow : Eq Nat (natDiv 7 2) 3 := refl
+def modRow : Eq Nat (natMod 17 5) 2 := refl
+-- The C runner evaluates these definitions and requires VAL_TRAP.
+def divideZero : Nat := natDiv 7 0
+def remainderZero : Nat := natMod 1 0

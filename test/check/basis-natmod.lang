@@ -1,0 +1,2 @@
+-- A bare name of the basis, not applied, is refused too.
+def r : Nat -> Nat -> Nat := natMod

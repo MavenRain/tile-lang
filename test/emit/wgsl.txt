@@ -1,6 +1,5 @@
 wgsl-tile.lang WGSL_FORM
 wgsl-name.lang WGSL_FORM
-wgsl-div.lang WGSL_FORM
 wgsl-bounds.lang BOUNDS
 wgsl-fuse.lang BOUNDS
 wgsl-else.lang BOUNDS

@@ -14,9 +14,9 @@ From this kit directory, or from a generated language directory:
 
 ```sh
 make check
-build/langc check examples/inventory.lang
-build/langc eval examples/inventory.lang stockTotal
-build/langc build examples/inventory.lang -o inventory.json
+build/langc check examples/tiles.lang
+build/langc eval examples/tiles.lang ab
+build/langc build examples/tiles.lang -o tiles.json
 build/langc build examples/laws.lang --js laws.js --selftest --json laws.json
 node laws.js
 build/langc build examples/kernels.lang --wgsl kernels.wgsl --js kernels.js --selftest
@@ -106,7 +106,7 @@ starts again for each instance.
 | Any other family | `{"tag": "name", ...}` with the fields of that constructor |
 
 An indexed family uses the same rules. Its index is in `type` (for
-example `Lot 3`), not in `value`.
+example `Lot 3` for a family `Lot (size : Nat)`), not in `value`.
 
 `langc build` refuses a program with these codes:
 
@@ -328,8 +328,10 @@ kernels on a GPU.
 
 ## The domain
 
-`domain/domain.lang` is the sample domain. `gen/embed.c` embeds it in the
-executable at build time. `domain/README.md` tells how to replace it.
+`domain/domain.lang` is the tile-lang domain: the twelve generators on
+the kit basis. `gen/embed.c` embeds it in the executable at build time.
+Only this file can name the kit basis (`REFUSE_BASIS`).
+`domain/README.md` tells how the domain works.
 
 ## Limits
 

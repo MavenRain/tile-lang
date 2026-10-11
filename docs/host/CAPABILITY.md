@@ -26,6 +26,10 @@ kit, or to the root of a generated language.
   18446744073709551615 are refused by the lexer (`test/parse/nat-range.lang`).
 - `natAdd` and `natMul` trap on overflow. `natSub` is truncated at 0.
   `natDiv` and `natMod` trap when the divisor is 0.
+  Only `domain/domain.lang` can name `natDiv`, `natMod` and the tile
+  basis (`tabulate`, `at`, `sumTo`, `foldTo`). The checker refuses a
+  program that names one of them (`REFUSE_BASIS`). A program uses the
+  domain generators.
   A trap is a value: it stops a computation only when the computation
   needs it. `langc eval` prints `trap` (`test/eval/expect.txt`).
   `langc build` refuses an instance that holds a trap (`EVAL_OVERFLOW`).

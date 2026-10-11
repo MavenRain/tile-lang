@@ -151,6 +151,10 @@ static const Builtin BUILTINS[] = {
 /* Names that no declaration can take (rule R4). */
 static const char *const RESERVED[] = {"Bool", "Text"};
 
+/* The kit basis. Only the domain can name it; a program uses the domain
+   generators (REFUSE_BASIS). */
+static const char *const BASIS[] = {"tabulate", "at", "sumTo", "foldTo", "natDiv", "natMod"};
+
 typedef enum {
   HEAD_TERM, /* a local, a definition or another term: plain application */
   HEAD_FAMILY,
@@ -1221,6 +1225,16 @@ static int unknown_name(Checker *c, const char *name) {
   return FAIL(c, "NAME_UNKNOWN", "unknown name %s", name);
 }
 
+/* 1 when NAME is in the kit basis. */
+static int in_basis(const char *name) {
+  size_t i;
+  for (i = 0; i < sizeof BASIS / sizeof BASIS[0]; i++) {
+    if (strcmp(BASIS[i], name) == 0)
+      return 1;
+  }
+  return 0;
+}
+
 /* Name resolution order: locals (the innermost first), definitions,
    families, constructors, projections, core names. */
 static int resolve_head(Checker *c, const Term *head, Head *h) {
@@ -1228,7 +1242,11 @@ static int resolve_head(Checker *c, const Term *head, Head *h) {
   h->kind = HEAD_TERM;
   if (head->kind != TERM_VAR || find_local(c, head->name) != NULL || find_def(c->m, head->name) != NO_DEF)
     return 1;
-  return find_known(c, head->name, h) ? 1 : unknown_name(c, head->name);
+  if (!find_known(c, head->name, h))
+    return unknown_name(c, head->name);
+  return h->kind == HEAD_BUILTIN && in_basis(head->name) && c->decls->items[c->decl_index].origin == ORIGIN_PROGRAM
+    ? FAIL(c, "REFUSE_BASIS", "%s is the kit basis: only the domain can name it; a program uses the domain generators", head->name)
+    : 1;
 }
 
 static uint32_t known_arity(const Checker *c, const Head *h) {

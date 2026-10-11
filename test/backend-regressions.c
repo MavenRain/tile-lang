@@ -104,6 +104,48 @@ static void writer_tests(void) {
   arena_release(&arena);
 }
 
+/* Domain-only features stay covered after replacing the sample domain. */
+static void domain_tests(void) {
+  const char *paths[] = {"test/domain/basis.lang", "test/domain/families.lang", "test/domain/wgsl-div.lang"};
+  const char *program = "def modE : Tile 2 2 U32 -> Tile 2 2 U32 := dynamicMod\n";
+  for (size_t i = 0; i < sizeof paths / sizeof paths[0]; i++) {
+    Arena arena;
+    Diag diag;
+    TokenList tokens;
+    DeclList decls = {0};
+    Machine machine;
+    char *text;
+    size_t len;
+    int ok;
+    arena_init(&arena, ARENA_LIMIT_BYTES);
+    diag_init(&diag);
+    ok = read_source(&arena, paths[i], &text, &len, &diag)
+      && lex_source(&arena, paths[i], text, len, &tokens, &diag)
+      && parse_source(&arena, paths[i], ORIGIN_DOMAIN, &tokens, &decls, &diag);
+    if (ok && i == 2u)
+      ok = lex_source(&arena, "program.lang", program, strlen(program), &tokens, &diag)
+        && parse_source(&arena, "program.lang", ORIGIN_PROGRAM, &tokens, &decls, &diag);
+    ok = ok && check_program(&arena, &decls, &machine, &diag);
+    expect(ok, paths[i]);
+    if (!ok)
+      diag_print(&diag, stderr);
+    if (ok && i == 0u) {
+      for (uint32_t d = 0; d < machine.def_count; d++) {
+        if (strcmp(machine.defs[d].name, "divideZero") == 0 || strcmp(machine.defs[d].name, "remainderZero") == 0) {
+          const Value *v = def_value(&machine, d);
+          expect(v != NULL && v->kind == VAL_TRAP, "division by zero did not produce a trap");
+        }
+      }
+    }
+    if (ok && i == 2u) {
+      WgslModule module;
+      expect(!wgsl_module(&machine, &module) && strcmp(diag.code, "WGSL_FORM") == 0,
+        "a dynamic divisor was accepted by the WGSL writer");
+    }
+    arena_release(&arena);
+  }
+}
+
 int main(void) {
   char directory[] = "/tmp/langc-backend-XXXXXX";
   char target[FILENAME_MAX];
@@ -187,6 +229,7 @@ int main(void) {
     expect(stat(target, &info) != 0 && stat(other, &info) != 0, "JS UTF-8 refusal created an output");
   }
   writer_tests();
+  domain_tests();
   unlink(source);
   rmdir(directory);
   printf("backend regressions: %u checked, %u failed\n", checked, failed);

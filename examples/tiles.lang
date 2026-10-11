@@ -1,29 +1,29 @@
--- Tiles: a Tile r c A holds a value of A at each index (i, j), i < r, j < c.
--- tabulate builds a tile, at reads a cell, sumTo and foldTo reduce over an
--- index. natDiv and natMod split a flat index. Each proof is refl.
-def eye : Tile 2 2 U32 := tabulate 2 2 (fun i j => flagIf (natEq i j) 1u 0u)
-def wide : Tile 2 3 U32 := tabulate 2 3 (fun i j => flagIf (natEq j (natAdd i 1)) 1u 0u)
-def mask : Tile 2 2 Flag := tabulate 2 2 (fun i j => natLe i j)
-def left : Tile 2 2 U32 := tabulate 2 2 (fun i j => flagIf (natEq i j) 2u 1u)
-def right : Tile 2 2 U32 := tabulate 2 2 (fun i j => flagIf (natEq i j) 5u 7u)
-def gemm : Tile 2 2 U32 := tabulate 2 2 (fun i j => sumTo 2 (fun k => u32Mul (at left i k) (at right k j)))
-def rowSum : U32 := sumTo 2 (fun k => at gemm 0 k)
-def quotient : Nat := natDiv 17 5
-def modulus : Nat := natMod 17 5
-def divide : Nat -> Nat -> Nat := fun x y => natDiv x y
-def remainder : Nat -> Nat -> Nat := fun x y => natMod x y
-def eyeCorner : Eq U32 (at eye 1 1) 1u := refl
-def eyeOff : Eq U32 (at eye 0 1) 0u := refl
-def wideCell : Eq U32 (at wide 0 1) 1u := refl
-def wideLast : Eq U32 (at wide 1 2) 1u := refl
-def wideFlat : Eq U32 (at wide (natDiv 5 3) (natMod 5 3)) 1u := refl
-def sumFour : Eq U32 (sumTo 4 (fun k => 3u)) 12u := refl
-def sumMixed : Eq U32 (sumTo 5 (fun k => flagIf (natLe k 2) 1u 10u)) 23u := refl
-def sumWrap : Eq U32 (sumTo 2 (fun k => 4294967295u)) 4294967294u := refl
-def gemmCells : Eq (Tile 2 2 U32) gemm (tabulate 2 2 (fun i j => flagIf (natEq i j) 17u 19u)) := refl
-def power : Eq U32 (foldTo 3 (fun x y => u32Mul x y) 1u (fun k => 2u)) 8u := refl
-def powerMixed : Eq U32 (foldTo 4 (fun x y => u32Mul x y) 1u (fun k => flagIf (natEq k 0) 1u 3u)) 27u := refl
-def foldOrder : Eq U32 (foldTo 3 (fun x y => u32Sub y x) 0u (fun k => flagIf (natEq k 1) 5u 2u)) 4294967295u := refl
-def divRow : Eq Nat (natDiv 7 2) 3 := refl
-def modRow : Eq Nat (natMod 7 2) 1 := refl
-def maskCells : Eq (Tile 2 2 Flag) mask (tabulate 2 2 (fun i j => flagIf (natEq i 1) (natEq j 1) (natLe 0 j))) := refl
+-- Tiles: a Tile r c U32 holds a U32 at each index (i, j), i < r, j < c. A
+-- program makes and changes tiles only with the domain generators
+-- (domain/domain.lang). The checker refuses a program that names the kit
+-- basis (REFUSE_BASIS). A program cannot read one cell, so each test compares
+-- two whole tiles. There is one Eq test for each generator. Each proof is refl.
+def ofNat : Nat -> U32 := fun n => fold (fun x => u32Add x 1u) 0u n
+-- a23 has the cells 1 to 6 in row order, b32 has the cells 7 to 12.
+def a23 : Tile 2 3 U32 := kernel 2 3 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natAdd j 1))))
+def b32 : Tile 3 2 U32 := kernel 3 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 2) (natAdd j 7))))
+def eye : Tile 2 2 U32 := kernel 2 2 1 1 (fun i j => fill 1 1 (flagIf (natEq i j) 1u 0u))
+def ab : Tile 2 2 U32 := gemm 2 3 2 a23 b32
+def sum23 : Tile 1 1 U32 := reduce 2 3 (fun x y => u32Add x y) 0u a23
+def copyId : Eq (Tile 2 3 U32) (copy 2 3 a23) a23 := refl
+def tmapCells : Eq (Tile 2 3 U32) (tmap 2 3 (fun x => u32Mul x 2u) a23) (kernel 2 3 1 1 (fun i j => fill 1 1 (ofNat (natMul 2 (natAdd (natMul i 3) (natAdd j 1)))))) := refl
+def fillCells : Eq (Tile 2 3 U32) (fill 2 3 5u) (tmap 2 3 (fun x => 5u) a23) := refl
+def taddCells : Eq (Tile 2 3 U32) (tadd 2 3 a23 a23) (tmap 2 3 (fun x => u32Mul x 2u) a23) := refl
+def tsubCells : Eq (Tile 2 3 U32) (tsub 2 3 a23 a23) (fill 2 3 0u) := refl
+def tmulCells : Eq (Tile 2 3 U32) (tmul 2 3 a23 a23) (tmap 2 3 (fun x => u32Mul x x) a23) := refl
+def gemmCells : Eq (Tile 2 2 U32) ab (kernel 2 2 1 1 (fun i j => fill 1 1 (flagIf (natEq i 0) (flagIf (natEq j 0) 58u 64u) (flagIf (natEq j 0) 139u 154u)))) := refl
+def gemmAccCells : Eq (Tile 2 2 U32) (gemmAcc 2 3 2 eye a23 b32) (kernel 2 2 1 1 (fun i j => fill 1 1 (flagIf (natEq i 0) (flagIf (natEq j 0) 59u 64u) (flagIf (natEq j 0) 139u 155u)))) := refl
+def reduceSum : Eq (Tile 1 1 U32) sum23 (fill 1 1 21u) := refl
+-- The fold is in row order. Each step gives the cell minus the accumulator:
+-- over the cells 1 to 6 that is 3 (the column order gives 9).
+def reduceOrder : Eq (Tile 1 1 U32) (reduce 2 3 (fun x y => u32Sub y x) 0u a23) (fill 1 1 3u) := refl
+def viewCells : Eq (Tile 2 2 U32) (view 2 3 0 1 1 1 2 2 a23) (kernel 2 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natAdd j 2))))) := refl
+def viewStride : Eq (Tile 2 2 U32) (view 2 3 0 0 1 2 2 2 a23) (kernel 2 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natAdd (natMul j 2) 1))))) := refl
+def trCells : Eq (Tile 3 2 U32) (tr 2 3 a23) (kernel 3 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul j 3) (natAdd i 1))))) := refl
+def kernelRows : Eq (Tile 2 3 U32) (kernel 2 1 1 3 (fun bi bj => view 2 3 bi 0 1 1 1 3 a23)) a23 := refl
+def kernelReverse : Eq (Tile 2 3 U32) (kernel 1 3 2 1 (fun bi bj => view 2 3 0 (natSub 2 bj) 1 1 2 1 a23)) (kernel 2 3 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natSub 3 j))))) := refl

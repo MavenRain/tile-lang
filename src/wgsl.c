@@ -417,6 +417,14 @@ static int loop(Kernel *k, Block *b, const Value *v, int fold, Buf *out, Ty *ty)
   const Value *av;
   const Value *g;
   int ok;
+  /* An empty contraction has no body to translate or bounds to check. */
+  if (v->args[0]->kind == VAL_NAT && v->args[0]->nat == 0u) {
+    if (fold)
+      return expr(k, b, v->args[2], out, ty);
+    *ty = TY_U32;
+    put(out, "0u");
+    return 1;
+  }
   memset(&body, 0, sizeof body);
   body.indent = b->indent + 1u;
   ok = typed(k, b, v->args[0], TY_U32, &bound) && (!fold || expr(k, b, v->args[2], &init, &acc_ty));
