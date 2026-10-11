@@ -21,9 +21,9 @@ fn axpyE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // dotE: Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 1 1 U32
-@group(0) @binding(4) var<storage, read> dotE_in0: array<u32>;
-@group(0) @binding(5) var<storage, read> dotE_in1: array<u32>;
-@group(0) @binding(6) var<storage, read_write> dotE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> dotE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> dotE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read_write> dotE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn dotE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -41,8 +41,8 @@ fn dotE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // prodE: Tile 4 4 U32 -> Tile 1 1 U32
-@group(0) @binding(7) var<storage, read> prodE_in0: array<u32>;
-@group(0) @binding(8) var<storage, read_write> prodE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> prodE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> prodE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn prodE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -60,9 +60,9 @@ fn prodE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // gemmE: Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 4 4 U32
-@group(0) @binding(9) var<storage, read> gemmE_in0: array<u32>;
-@group(0) @binding(10) var<storage, read> gemmE_in1: array<u32>;
-@group(0) @binding(11) var<storage, read_write> gemmE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> gemmE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> gemmE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read_write> gemmE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn gemmE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -80,9 +80,9 @@ fn gemmE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // blockedE: Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 4 4 U32
-@group(0) @binding(12) var<storage, read> blockedE_in0: array<u32>;
-@group(0) @binding(13) var<storage, read> blockedE_in1: array<u32>;
-@group(0) @binding(14) var<storage, read_write> blockedE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> blockedE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> blockedE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read_write> blockedE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn blockedE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -104,10 +104,10 @@ fn blockedE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // attnE: Tile 4 2 U32 -> Tile 4 2 U32 -> Tile 4 3 U32 -> Tile 4 3 U32
-@group(0) @binding(15) var<storage, read> attnE_in0: array<u32>;
-@group(0) @binding(16) var<storage, read> attnE_in1: array<u32>;
-@group(0) @binding(17) var<storage, read> attnE_in2: array<u32>;
-@group(0) @binding(18) var<storage, read_write> attnE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> attnE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> attnE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read> attnE_in2: array<u32>;
+@group(0) @binding(3) var<storage, read_write> attnE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn attnE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -129,10 +129,10 @@ fn attnE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // linE: Tile 4 2 U32 -> Tile 4 2 U32 -> Tile 4 3 U32 -> Tile 4 3 U32
-@group(0) @binding(19) var<storage, read> linE_in0: array<u32>;
-@group(0) @binding(20) var<storage, read> linE_in1: array<u32>;
-@group(0) @binding(21) var<storage, read> linE_in2: array<u32>;
-@group(0) @binding(22) var<storage, read_write> linE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> linE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> linE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read> linE_in2: array<u32>;
+@group(0) @binding(3) var<storage, read_write> linE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn linE(@builtin(global_invocation_id) id: vec3<u32>) {

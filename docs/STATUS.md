@@ -45,7 +45,7 @@ tile.
    tile.
 6. An eta rule for tiles in the checker. It would make the H1 rows of
    the law table DONE.
-7. A build check for the limits L1 and L2. This needs a change to the
+7. A build check for the limit L2. This needs a change to the
    host kit `hosts/tcc-webgpu` in lang-template.
 
 ## Host limits of the laws (T2)
@@ -81,19 +81,22 @@ codes H1 to H4 mark the forms that the checker cannot prove. Each gives
 
 ## Known limits
 
-- L1, binding numbers. The WGSL writer numbers the bindings across all
-  entries of a program in group 0, with no cap. The ES module calls
-  `requestDevice()` with the default limits (`maxBindingsPerBindGroup`
-  1000) and the layout `'auto'`. Thus an entry with a binding of 1000 or
-  more fails when the module creates its pipeline. A GPU probe confirmed
-  this on 2026-10-11: in a program with 600 `copy` entries, entry `e599`
-  (binding 1198) gives the GPUPipelineError "Unable to derive an implicit
+- L1, binding numbers: FIXED on 2026-10-11. Before the fix, the WGSL
+  writer numbered the bindings across all entries of a program in group
+  0, with no cap. The ES module calls `requestDevice()` with the default
+  limits (`maxBindingsPerBindGroup` 1000) and the layout `'auto'`. Thus
+  an entry with a binding of 1000 or more failed when the module created
+  its pipeline. In a program with 600 `copy` entries, entry `e599`
+  (binding 1198) gave the GPUPipelineError "Unable to derive an implicit
   layout: Binding index 1198 is greater than the maximum number 1000".
-  The build does not refuse such a program, so the failure comes only at
-  run time. An entry has at most 8 bindings (7 parameters and the
-  result), so a program with 125 entries or fewer is safe. The largest
-  binding is 30 in `examples/kernels.lang` and 22 in
-  `examples/fused.lang`. The fix is a change to the host kit.
+  The fix is in the host kit `hosts/tcc-webgpu`: each entry numbers its
+  bindings from 0. An entry has at most 8 bindings (7 parameters and the
+  result), so a binding is at most 7 for each count of entries. WGSL
+  permits two entries to share a binding number, because no entry point
+  uses a buffer of another entry. A GPU probe with the kit compiler
+  confirmed this on 2026-10-11: a program with 600 entries and the kit
+  `kernels` example ran with no error. The largest binding in
+  `examples/kernels.lang` and `examples/fused.lang` is now 3.
 - L2, dispatch size. The dispatch is 1-D: the cells of the result
   divided by 64, rounded up. The WebGPU default
   `maxComputeWorkgroupsPerDimension` is 65535, so a result with more

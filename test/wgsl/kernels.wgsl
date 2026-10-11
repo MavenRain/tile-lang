@@ -19,8 +19,8 @@ fn copyE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // mapE: Tile 2 3 U32 -> Tile 2 3 U32
-@group(0) @binding(2) var<storage, read> mapE_in0: array<u32>;
-@group(0) @binding(3) var<storage, read_write> mapE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> mapE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> mapE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn mapE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -34,9 +34,9 @@ fn mapE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // addE: Tile 2 3 U32 -> Tile 2 3 U32 -> Tile 2 3 U32
-@group(0) @binding(4) var<storage, read> addE_in0: array<u32>;
-@group(0) @binding(5) var<storage, read> addE_in1: array<u32>;
-@group(0) @binding(6) var<storage, read_write> addE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> addE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> addE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read_write> addE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn addE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -50,9 +50,9 @@ fn addE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // scaleE: U32 -> Tile 2 3 U32 -> Tile 2 3 U32
-@group(0) @binding(7) var<storage, read> scaleE_in0: array<u32>;
-@group(0) @binding(8) var<storage, read> scaleE_in1: array<u32>;
-@group(0) @binding(9) var<storage, read_write> scaleE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> scaleE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> scaleE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read_write> scaleE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn scaleE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -66,9 +66,9 @@ fn scaleE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // gemmE: Tile 2 3 U32 -> Tile 3 2 U32 -> Tile 2 2 U32
-@group(0) @binding(10) var<storage, read> gemmE_in0: array<u32>;
-@group(0) @binding(11) var<storage, read> gemmE_in1: array<u32>;
-@group(0) @binding(12) var<storage, read_write> gemmE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> gemmE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> gemmE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read_write> gemmE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn gemmE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -86,10 +86,10 @@ fn gemmE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // accE: Tile 2 2 U32 -> Tile 2 3 U32 -> Tile 3 2 U32 -> Tile 2 2 U32
-@group(0) @binding(13) var<storage, read> accE_in0: array<u32>;
-@group(0) @binding(14) var<storage, read> accE_in1: array<u32>;
-@group(0) @binding(15) var<storage, read> accE_in2: array<u32>;
-@group(0) @binding(16) var<storage, read_write> accE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> accE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read> accE_in1: array<u32>;
+@group(0) @binding(2) var<storage, read> accE_in2: array<u32>;
+@group(0) @binding(3) var<storage, read_write> accE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn accE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -107,8 +107,8 @@ fn accE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // sumE: Tile 2 3 U32 -> Tile 1 1 U32
-@group(0) @binding(17) var<storage, read> sumE_in0: array<u32>;
-@group(0) @binding(18) var<storage, read_write> sumE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> sumE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> sumE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn sumE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -126,8 +126,8 @@ fn sumE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // viewE: Tile 2 3 U32 -> Tile 2 2 U32
-@group(0) @binding(19) var<storage, read> viewE_in0: array<u32>;
-@group(0) @binding(20) var<storage, read_write> viewE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> viewE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> viewE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn viewE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -141,8 +141,8 @@ fn viewE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // trE: Tile 2 3 U32 -> Tile 3 2 U32
-@group(0) @binding(21) var<storage, read> trE_in0: array<u32>;
-@group(0) @binding(22) var<storage, read_write> trE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> trE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> trE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn trE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -156,8 +156,8 @@ fn trE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // blockE: Tile 4 4 U32 -> Tile 4 4 U32
-@group(0) @binding(23) var<storage, read> blockE_in0: array<u32>;
-@group(0) @binding(24) var<storage, read_write> blockE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> blockE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> blockE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn blockE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -171,8 +171,8 @@ fn blockE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // emptyRowsE: U32 -> Tile 1 1 U32
-@group(0) @binding(25) var<storage, read> emptyRowsE_in0: array<u32>;
-@group(0) @binding(26) var<storage, read_write> emptyRowsE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> emptyRowsE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> emptyRowsE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn emptyRowsE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -186,8 +186,8 @@ fn emptyRowsE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // emptyColsE: U32 -> Tile 1 1 U32
-@group(0) @binding(27) var<storage, read> emptyColsE_in0: array<u32>;
-@group(0) @binding(28) var<storage, read_write> emptyColsE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> emptyColsE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> emptyColsE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn emptyColsE(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -201,8 +201,8 @@ fn emptyColsE(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 // emptyGemmE: U32 -> Tile 2 3 U32
-@group(0) @binding(29) var<storage, read> emptyGemmE_in0: array<u32>;
-@group(0) @binding(30) var<storage, read_write> emptyGemmE_out: array<u32>;
+@group(0) @binding(0) var<storage, read> emptyGemmE_in0: array<u32>;
+@group(0) @binding(1) var<storage, read_write> emptyGemmE_out: array<u32>;
 
 @compute @workgroup_size(64)
 fn emptyGemmE(@builtin(global_invocation_id) id: vec3<u32>) {

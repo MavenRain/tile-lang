@@ -63,6 +63,15 @@ entries or tests (the `k` offset of `blockedE`, a `k` to `q` in `linE`,
 the `prodE` seed, `x` to `y` in `axpyE`, and `tmul` to `tadd` in `dotE`).
 The checker refused each mutant with `TYPE_REFL` (5 of 5 killed).
 
+L1 (binding numbers, 2026-10-11) changed the WGSL writer, a copy of the
+host kit change: each entry numbers its bindings from 0. The goldens
+`test/json/kernels.json`, `test/json/fused.json`,
+`test/wgsl/kernels.wgsl` and `test/wgsl/fused.wgsl` changed only in the
+binding numbers. A kill check put back the old numbering: the gate gave
+7 failures on these goldens. L1 changed the binding numbers, so
+`make gpu-check` ran again on 2026-10-11, after L1: 15 modules ran with
+no error.
+
 ## GPU check
 
 `make gpu-check` builds each example with `--js --selftest --gpu` and

@@ -177,8 +177,9 @@ design:
 - `U32` has no compare, no division and no conversion to `Nat`.
 - A WebGPU shader stage has 8 storage buffers by default. Thus an entry
   has at most 7 parameters.
-- The default device limit puts each binding index below 1000
-  (`docs/STATUS.md`, limit L1).
+- Each entry numbers its bindings from 0, so a binding is at most 7 for
+  each count of entries. This is below the default device limit of 1000
+  (`docs/STATUS.md`, L1 is fixed).
 
 The checker refuses an axiom (`REFUSE_AXIOM`), so each `Eq` proof is a
 checked term. There is no axiom report. `make check` compares each
@@ -205,8 +206,7 @@ runs each GPU test on a GPU.
   parallel form). M1 trusts the user `op`. `examples/tile-laws.lang`
   proves `u32Add` and `u32Mul` associative on closed values only.
 
-The GPU limits L1 and L2 in `docs/STATUS.md` need a change to the host
-kit.
+The GPU limit L2 in `docs/STATUS.md` needs a change to the host kit.
 
 ## 10. Milestones
 
