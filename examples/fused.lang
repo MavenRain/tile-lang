@@ -1,0 +1,47 @@
+-- Fused kernels: each entry composes domain generators. `langc build --wgsl`
+-- writes each entry as one compute pass that writes no intermediate buffer
+-- (test/wgsl/fused.wgsl). Each test is refl: the C evaluator gives the two
+-- sides on closed tiles. With --gpu, each test also runs its entry on a GPU
+-- and compares the tile with the C value (make gpu-check).
+-- The cells are U32. Thus each order of the sums gives the same bits on the
+-- GPU and in C. The factor 4000000001u and the products in prodE make the
+-- cells wrap modulo 2^32.
+def ofNat : Nat -> U32 := fun n => fold (fun x => u32Add x 1u) 0u n
+-- a44 (i, j) = 4i + j + 1 and b44 (i, j) = i + 3j + 2.
+def a44 : Tile 4 4 U32 := kernel 4 4 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 4) (natAdd j 1))))
+def b44 : Tile 4 4 U32 := kernel 4 4 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul j 3) (natAdd i 2))))
+def w44 : Tile 4 4 U32 := tmap 4 4 (fun x => u32Mul x 4000000001u) a44
+-- q42 (i, m) = 2i + m + 1, k42 (l, m) = 3l + m + 5 and v43 (l, j) = l + j.
+def q42 : Tile 4 2 U32 := kernel 4 2 1 1 (fun i m => fill 1 1 (ofNat (natAdd (natMul i 2) (natAdd m 1))))
+def k42 : Tile 4 2 U32 := kernel 4 2 1 1 (fun l m => fill 1 1 (ofNat (natAdd (natMul l 3) (natAdd m 5))))
+def v43 : Tile 4 3 U32 := kernel 4 3 1 1 (fun l j => fill 1 1 (ofNat (natAdd l j)))
+def w42 : Tile 4 2 U32 := tmap 4 2 (fun x => u32Mul x 4000000001u) q42
+-- Elementwise: axpyE s x y = s x + y.
+def axpyE : U32 -> Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 4 4 U32 := fun s x y => tadd 4 4 (tmap 4 4 (fun e => u32Mul s e) x) y
+-- Reduce: dotE folds u32Add over the cell products. prodE folds u32Mul.
+def dotE : Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 1 1 U32 := fun x y => reduce 4 4 (fun p e => u32Add p e) 0u (tmul 4 4 x y)
+def prodE : Tile 4 4 U32 -> Tile 1 1 U32 := fun t => reduce 4 4 (fun p e => u32Mul p e) 1u t
+-- GEMM, and the blocked GEMM: a 2 x 2 grid of 2 x 2 blocks. The block
+-- (bi, bj) adds the products of the blocks (bi, 0) (0, bj) and (bi, 1) (1, bj).
+def gemmE : Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 4 4 U32 := fun x y => gemm 4 4 4 x y
+def blockedE : Tile 4 4 U32 -> Tile 4 4 U32 -> Tile 4 4 U32 := fun x y => kernel 2 2 2 2 (fun bi bj => gemmAcc 2 2 2 (gemm 2 2 2 (view 4 4 (natMul bi 2) 0 1 1 2 2 x) (view 4 4 0 (natMul bj 2) 1 1 2 2 y)) (view 4 4 (natMul bi 2) 2 1 1 2 2 x) (view 4 4 2 (natMul bj 2) 1 1 2 2 y))
+-- The attention core without softmax: attnE q k v = (q k^T) v. linE gives
+-- the same product in the other order, q (k^T v).
+def attnE : Tile 4 2 U32 -> Tile 4 2 U32 -> Tile 4 3 U32 -> Tile 4 3 U32 := fun q k v => gemm 4 4 3 (gemm 4 2 4 q (tr 4 2 k)) v
+def linE : Tile 4 2 U32 -> Tile 4 2 U32 -> Tile 4 3 U32 -> Tile 4 3 U32 := fun q k v => gemm 4 2 3 q (gemm 2 4 3 (tr 4 2 k) v)
+-- 3 (4i + j + 1) + (i + 3j + 2) = 13i + 6j + 5. With s = 2^32 - 1, s x + x = 0.
+def axpyCells : Eq (Tile 4 4 U32) (axpyE 3u a44 b44) (kernel 4 4 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 13) (natAdd (natMul j 6) 5))))) := refl
+def axpyWrap : Eq (Tile 4 4 U32) (axpyE 4294967295u a44 a44) (fill 4 4 0u) := refl
+-- 1 + 4 + ... + 256 = 1496. 16! modulo 2^32 = 2004189184.
+def dotCells : Eq (Tile 1 1 U32) (dotE a44 a44) (fill 1 1 1496u) := refl
+def prodWrap : Eq (Tile 1 1 U32) (prodE a44) (fill 1 1 2004189184u) := refl
+-- The sum over l of (4i + l + 1) (l + 3j + 2) = 48ij + 56i + 30j + 40.
+def gemmCells : Eq (Tile 4 4 U32) (gemmE a44 b44) (kernel 4 4 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul 48 (natMul i j)) (natAdd (natMul 56 i) (natAdd (natMul 30 j) 40)))))) := refl
+def blockedCells : Eq (Tile 4 4 U32) (blockedE a44 b44) (gemmE a44 b44) := refl
+def blockedWrap : Eq (Tile 4 4 U32) (blockedE w44 b44) (gemmE w44 b44) := refl
+-- With k = q: the sum over l of (q q^T) (i, l) (l + j) = 148i + 114 + j (72i + 56).
+def attnCells : Eq (Tile 4 3 U32) (attnE q42 q42 v43) (kernel 4 3 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul 148 i) (natAdd 114 (natMul j (natAdd (natMul 72 i) 56))))))) := refl
+def linCells : Eq (Tile 4 3 U32) (linE q42 q42 v43) (kernel 4 3 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul 148 i) (natAdd 114 (natMul j (natAdd (natMul 72 i) 56))))))) := refl
+def attnOrder : Eq (Tile 4 3 U32) (attnE q42 k42 v43) (linE q42 k42 v43) := refl
+def attnWrap : Eq (Tile 4 3 U32) (attnE w42 k42 v43) (linE w42 k42 v43) := refl
+def linWrap : Eq (Tile 4 3 U32) (linE w42 k42 v43) (attnE w42 k42 v43) := refl

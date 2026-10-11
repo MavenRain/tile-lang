@@ -221,9 +221,9 @@ echo "js wgsl: $js_wgsl modules checked"
 # K-C7 + O8: with --gpu the selftest also runs each kernel on a GPU and
 # compares the tile with the C value of the left side of its test. First the
 # C value must equal the JS value. node has no GPU adapter, so the
-# kernels.lang module must then throw with its count of GPU tests (never a
-# silent skip), and a module without GPU tests must pass. `make gpu-check`
-# runs these modules under Deno on a real GPU.
+# kernels.lang and fused.lang modules must then throw with their counts of
+# GPU tests (never a silent skip), and a module without GPU tests must pass.
+# `make gpu-check` runs these modules under Deno on a real GPU.
 js_gpu=0
 for prog in examples/*.lang; do
   name=$(basename "$prog" .lang)
@@ -236,8 +236,10 @@ for prog in examples/*.lang; do
   status=0
   node "$tmp/gpu-$name.js" 2>"$tmp/err" || status=$?
   case "$name:$status" in
-    kernels:0) echo "FAIL js gpu $prog: node passed without a GPU adapter"; fail=$((fail + 1)) ;;
+    kernels:0|fused:0) echo "FAIL js gpu $prog: node passed without a GPU adapter"; fail=$((fail + 1)) ;;
     kernels:*) rg -q 'Error: selftest: 13 GPU tests and no GPU adapter' "$tmp/err" \
+      || { echo "FAIL js gpu $prog: $(rg -m 1 'Error' "$tmp/err")"; fail=$((fail + 1)); } ;;
+    fused:*) rg -q 'Error: selftest: 12 GPU tests and no GPU adapter' "$tmp/err" \
       || { echo "FAIL js gpu $prog: $(rg -m 1 'Error' "$tmp/err")"; fail=$((fail + 1)); } ;;
     *:0) ;;
     *) echo "FAIL js gpu $prog: $(rg -m 1 'Error' "$tmp/err")"; fail=$((fail + 1)) ;;
