@@ -1,0 +1,113 @@
+-- Tile laws: the laws of docs/PLAN.md section 3 as Eq proofs. Each proof is
+-- refl: the checker normalizes the two sides and compares them. A closed law
+-- uses closed tiles. An open law takes tiles or functions as parameters. A
+-- definition with a parameter and an Eq result is not a WGSL entry. With
+-- closed shapes, the checker expands a tile into the grid of its cells, so
+-- an open tile t gives the cells (at t i j). examples/laws.lang has the laws
+-- of the kit formers.
+--
+-- Status: DONE (refl proves the law) or HOST-LIMIT (refl cannot prove the
+-- law: H1 to H4 below give the checker message). This file has each DONE
+-- form. The open-shape form takes the shape as (r : Nat) -> (c : Nat) -> ...
+--
+--   law                                closed  open, closed shape  open shape
+--   copy t = t                         DONE    DONE                DONE
+--   tmap (fun x => x) t = t            DONE    H1                  H1
+--   tmap f (tmap g t) = tmap (f . g) t DONE    DONE                H2
+--   a view of a view is one view       DONE    DONE (1)            H2
+--   view 0 0 1 1 of t = t              DONE    H1 (2)              H4
+--   tr (tr t) = t                      DONE    H1 (2)              H2
+--   tr of a view = a view of tr        DONE    DONE                H2
+--   gemm is linear on the left         DONE    H3                  H2
+--   gemm is linear on the right        DONE    H3                  H2
+--   a scalar passes through gemm       DONE    H3                  H2
+--   gemm is associative                DONE    H3                  H2
+--   gemmAcc z a b = tadd z (gemm a b)  DONE    DONE                DONE
+--   kernel tiling identity             DONE    H1 (2)              H2
+--   kernel of tadd of views = tadd     DONE    DONE                H2
+--   kernel of tmap of views = tmap     DONE    DONE                H2
+--   kernel of tadd = tadd of kernels   DONE    DONE                H2
+--   O7: u32Add, u32Mul associative     DONE    H3                  (none)
+--   O7: reduce of tadd = sum of reduce DONE    H3                  H2
+--   O7: reduce of tr t = reduce of t   DONE    H3                  H2
+--
+-- (1) The offsets are literals. With open offsets: H4.
+-- (2) The eta form is DONE: it writes the right side t as its expansion
+--     tmap r c (fun x => x) t.
+-- H1: no tile eta. "refl cannot prove the equality: the left side
+--     normalizes to grid 2 3 (at t 0 0) ... (at t 1 2), the right side
+--     normalizes to t". With an open shape the left side is
+--     "tabulate r c (fun i => fun j => at t i j)".
+-- H2: with an open shape, at of tabulate does not reduce. "the left side
+--     normalizes to tabulate r c (fun i => fun j => f (at (tabulate r c
+--     (fun _x0 => fun _x1 => g (at t _x0 _x1))) i j))".
+-- H3: the checker does not normalize open U32 ring terms. "the left side
+--     normalizes to u32Add (u32Add x y) z, the right side normalizes to
+--     u32Add x (u32Add y z)".
+-- H4: natAdd and natMul do not reduce on an open Nat. "at t (natAdd 0
+--     (natMul 1 i)) (natAdd 0 (natMul 1 j))".
+
+def ofNat : Nat -> U32 := fun n => fold (fun x => u32Add x 1u) 0u n
+-- a23 has the cells 1 to 6 in row order, b32 the cells 7 to 12 and c44 the
+-- cells 0 to 15. The cells of w23 and w32 are large and odd, so the sums and
+-- the products wrap mod 2^32. d22 is a nonzero 2 x 2 tile.
+def a23 : Tile 2 3 U32 := kernel 2 3 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 3) (natAdd j 1))))
+def b32 : Tile 3 2 U32 := kernel 3 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 2) (natAdd j 7))))
+def c44 : Tile 4 4 U32 := kernel 4 4 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 4) j)))
+def w23 : Tile 2 3 U32 := tmap 2 3 (fun x => u32Mul x 4000000001u) a23
+def w32 : Tile 3 2 U32 := tmap 3 2 (fun x => u32Mul x 3000000001u) b32
+def d22 : Tile 2 2 U32 := kernel 2 2 1 1 (fun i j => fill 1 1 (ofNat (natAdd (natMul i 5) (natAdd j 2))))
+def e44 : Tile 4 4 U32 := tmap 4 4 (fun x => u32Mul x 7u) c44
+
+-- 1. tmap is a functor: identity and composition. copy is the identity.
+def tmapId : Eq (Tile 2 3 U32) (tmap 2 3 (fun x => x) w23) w23 := refl
+def tmapComp : Eq (Tile 2 3 U32) (tmap 2 3 (fun x => u32Add x 7u) (tmap 2 3 (fun x => u32Mul x 3000000001u) a23)) (tmap 2 3 (fun x => u32Add (u32Mul x 3000000001u) 7u) a23) := refl
+def copyOpen : (t : Tile 2 3 U32) -> Eq (Tile 2 3 U32) (copy 2 3 t) t := fun t => refl
+def copyShape : (r : Nat) -> (c : Nat) -> (t : Tile r c U32) -> Eq (Tile r c U32) (copy r c t) t := fun r c t => refl
+def tmapCompOpen : (f : U32 -> U32) -> (g : U32 -> U32) -> (t : Tile 2 3 U32) -> Eq (Tile 2 3 U32) (tmap 2 3 f (tmap 2 3 g t)) (tmap 2 3 (fun x => f (g x)) t) := fun f g t => refl
+
+-- 2. view composition. The view (r1, c1, rs1, cs1) of the view (r0, c0, rs,
+-- cs) is the view (r0 + rs r1, c0 + cs c1, rs rs1, cs cs1). tr is an
+-- involution, and tr of a view is the view of tr with the axes swapped.
+def viewView : Eq (Tile 1 2 U32) (view 2 3 1 0 1 2 1 2 (view 4 4 0 1 2 1 2 3 c44)) (view 4 4 (natAdd 0 (natMul 2 1)) (natAdd 1 (natMul 1 0)) (natMul 2 1) (natMul 1 2) 1 2 c44) := refl
+def viewViewWide : Eq (Tile 2 2 U32) (view 3 4 0 1 2 2 2 2 (view 4 4 1 0 1 1 3 4 c44)) (view 4 4 1 1 2 2 2 2 c44) := refl
+def viewId : Eq (Tile 2 3 U32) (view 2 3 0 0 1 1 2 3 w23) w23 := refl
+def trTr : Eq (Tile 2 3 U32) (tr 3 2 (tr 2 3 w23)) w23 := refl
+def trView : Eq (Tile 3 2 U32) (tr 2 3 (view 4 4 1 0 2 1 2 3 c44)) (view 4 4 0 1 1 2 3 2 (tr 4 4 c44)) := refl
+def viewViewOpen : (t : Tile 4 4 U32) -> Eq (Tile 2 2 U32) (view 3 4 0 1 2 2 2 2 (view 4 4 1 0 1 1 3 4 t)) (view 4 4 1 1 2 2 2 2 t) := fun t => refl
+def trViewOpen : (t : Tile 4 4 U32) -> Eq (Tile 3 2 U32) (tr 2 3 (view 4 4 1 0 2 1 2 3 t)) (view 4 4 0 1 1 2 3 2 (tr 4 4 t)) := fun t => refl
+def viewIdEta : (t : Tile 2 3 U32) -> Eq (Tile 2 3 U32) (view 2 3 0 0 1 1 2 3 t) (tmap 2 3 (fun x => x) t) := fun t => refl
+def trTrEta : (t : Tile 2 3 U32) -> Eq (Tile 2 3 U32) (tr 3 2 (tr 2 3 t)) (tmap 2 3 (fun x => x) t) := fun t => refl
+
+-- 3. gemm is bilinear and associative in the ring mod 2^32. gemmAcc z a b
+-- is tadd z (gemm a b).
+def gemmLeft : Eq (Tile 2 2 U32) (gemm 2 3 2 (tadd 2 3 a23 w23) b32) (tadd 2 2 (gemm 2 3 2 a23 b32) (gemm 2 3 2 w23 b32)) := refl
+def gemmRight : Eq (Tile 2 2 U32) (gemm 2 3 2 a23 (tadd 3 2 b32 w32)) (tadd 2 2 (gemm 2 3 2 a23 b32) (gemm 2 3 2 a23 w32)) := refl
+def gemmScaleLeft : Eq (Tile 2 2 U32) (gemm 2 3 2 (tmap 2 3 (fun x => u32Mul 3000000001u x) a23) w32) (tmap 2 2 (fun x => u32Mul 3000000001u x) (gemm 2 3 2 a23 w32)) := refl
+def gemmScaleRight : Eq (Tile 2 2 U32) (gemm 2 3 2 w23 (tmap 3 2 (fun x => u32Mul 3000000001u x) b32)) (tmap 2 2 (fun x => u32Mul 3000000001u x) (gemm 2 3 2 w23 b32)) := refl
+def gemmAssoc : Eq (Tile 2 3 U32) (gemm 2 2 3 (gemm 2 3 2 w23 w32) a23) (gemm 2 3 3 w23 (gemm 3 2 3 w32 a23)) := refl
+def gemmAccSum : Eq (Tile 2 2 U32) (gemmAcc 2 3 2 d22 w23 b32) (tadd 2 2 d22 (gemm 2 3 2 w23 b32)) := refl
+def gemmAccShape : (m : Nat) -> (k : Nat) -> (n : Nat) -> (z : Tile m n U32) -> (a : Tile m k U32) -> (b : Tile k n U32) -> Eq (Tile m n U32) (gemmAcc m k n z a b) (tadd m n z (gemm m k n a b)) := fun m k n z a b => refl
+
+-- 4. kernel composition. The blocks of a tile, put back on the grid, give
+-- the tile (the tiling identity). The blocks of a pointwise op are the
+-- pointwise op of the blocks.
+def kernelTiling : Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 c44)) c44 := refl
+def kernelTilingCols : Eq (Tile 2 3 U32) (kernel 1 3 2 1 (fun bi bj => view 2 3 (natMul bi 2) (natMul bj 1) 1 1 2 1 w23)) w23 := refl
+def kernelAdd : Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => tadd 2 2 (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 c44) (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 e44))) (tadd 4 4 c44 e44) := refl
+def kernelMap : Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => tmap 2 2 (fun x => u32Mul x x) (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 e44))) (tmap 4 4 (fun x => u32Mul x x) e44) := refl
+def kernelSplit : Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => tadd 2 2 (fill 2 2 (ofNat (natAdd bi bj))) (tr 2 2 (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 c44)))) (tadd 4 4 (kernel 2 2 2 2 (fun bi bj => fill 2 2 (ofNat (natAdd bi bj)))) (kernel 2 2 2 2 (fun bi bj => tr 2 2 (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 c44)))) := refl
+def kernelAddOpen : (x : Tile 4 4 U32) -> (y : Tile 4 4 U32) -> Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => tadd 2 2 (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 x) (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 y))) (tadd 4 4 x y) := fun x y => refl
+def kernelMapOpen : (f : U32 -> U32) -> (t : Tile 4 4 U32) -> Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => tmap 2 2 f (view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 t))) (tmap 4 4 f t) := fun f t => refl
+def kernelSplitOpen : (f : Nat -> Nat -> Tile 2 2 U32) -> (h : Nat -> Nat -> Tile 2 2 U32) -> Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => tadd 2 2 (f bi bj) (h bi bj))) (tadd 4 4 (kernel 2 2 2 2 f) (kernel 2 2 2 2 h)) := fun f h => refl
+def kernelTilingEta : (t : Tile 4 4 U32) -> Eq (Tile 4 4 U32) (kernel 2 2 2 2 (fun bi bj => view 4 4 (natMul bi 2) (natMul bj 2) 1 1 2 2 t)) (tmap 4 4 (fun x => x) t) := fun t => refl
+
+-- 5. O7: reduce needs an associative op. u32Add and u32Mul are associative
+-- (and commutative) on closed U32 values, so the order of the fold does not
+-- change the result: reduce of tr t is reduce of t. reduce with u32Add takes
+-- tadd to the sum of the two 1 x 1 results.
+def addAssoc : Eq U32 (u32Add (u32Add 4294967295u 3000000001u) 7u) (u32Add 4294967295u (u32Add 3000000001u 7u)) := refl
+def mulAssoc : Eq U32 (u32Mul (u32Mul 4294967295u 3000000001u) 7u) (u32Mul 4294967295u (u32Mul 3000000001u 7u)) := refl
+def reduceTadd : Eq (Tile 1 1 U32) (reduce 2 3 (fun x y => u32Add x y) 0u (tadd 2 3 a23 w23)) (tadd 1 1 (reduce 2 3 (fun x y => u32Add x y) 0u a23) (reduce 2 3 (fun x y => u32Add x y) 0u w23)) := refl
+def reduceTrAdd : Eq (Tile 1 1 U32) (reduce 3 2 (fun x y => u32Add x y) 0u (tr 2 3 w23)) (reduce 2 3 (fun x y => u32Add x y) 0u w23) := refl
+def reduceTrMul : Eq (Tile 1 1 U32) (reduce 3 2 (fun x y => u32Mul x y) 1u (tr 2 3 w23)) (reduce 2 3 (fun x y => u32Mul x y) 1u w23) := refl
